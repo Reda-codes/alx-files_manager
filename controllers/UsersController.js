@@ -1,6 +1,4 @@
-import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
-import redisClient from '../utils/redis';
 
 const { getUserFromToken, hashPassword } = require('../utils/tools');
 

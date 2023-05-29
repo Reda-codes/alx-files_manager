@@ -1,4 +1,3 @@
-/* import dbClient from '../utils/db'; */
 const { getUserFromToken } = require('../utils/tools');
 
 class FilesController {
