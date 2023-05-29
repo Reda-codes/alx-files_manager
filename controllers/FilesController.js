@@ -45,7 +45,7 @@ class FilesController {
       }
 
       const file = {
-        userId: ObjectId(user._Id),
+        userId: user._id,
         name,
         type,
         isPublic,
