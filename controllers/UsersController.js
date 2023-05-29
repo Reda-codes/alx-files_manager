@@ -6,22 +6,20 @@ class UsersController {
   static async postNew(request, response) {
     const { email = false, password = false } = request.body;
     if (!email) {
-      response.status(400).send({ error: 'Missing email' });
-    } else if (!password) {
-      response.status(400).send({ error: 'Missing password' });
-    } else {
-      try {
-        const user = await dbClient.client.db().collection('users').findOne({ email });
-        if (user !== null) {
-          response.status(400).send({ error: 'Already exist' });
-        } else {
-          const hashed = hashPassword(password);
-          const result = await dbClient.client.db().collection('users').insertOne({ email, password: hashed });
-          response.status(201).send({ id: result.insertedId, email });
-        }
-      } catch (error) {
-        response.status(500).send({ error: 'Internal server error' });
+      return response.status(400).send({ error: 'Missing email' });
+    } if (!password) {
+      return response.status(400).send({ error: 'Missing password' });
+    }
+    try {
+      const user = await dbClient.client.db().collection('users').findOne({ email });
+      if (user !== null) {
+        return response.status(400).send({ error: 'Already exist' });
       }
+      const hashed = hashPassword(password);
+      const result = await dbClient.client.db().collection('users').insertOne({ email, password: hashed });
+      return response.status(201).send({ id: result.insertedId, email });
+    } catch (error) {
+      return response.status(500).send({ error: 'Internal server error' });
     }
   }
 
@@ -29,10 +27,9 @@ class UsersController {
     const { 'x-token': token } = request.headers;
     const user = await getUserFromToken(token);
     if (user !== null) {
-      response.send({ id: user._id, email: user.email });
-    } else {
-      response.status(401).send({ error: 'Unauthorized' });
+      return response.send({ id: user._id, email: user.email });
     }
+    return response.status(401).send({ error: 'Unauthorized' });
   }
 }
 
