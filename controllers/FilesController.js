@@ -134,6 +134,16 @@ class FilesController {
           {
             $limit: pageSize,
           },
+          {
+            $project: {
+              id: '$_id',
+              userId: '$userId',
+              name: '$name',
+              type: '$type',
+              isPublic: '$isPublic',
+              parentId: '$parentId',
+            },
+          },
         ];
 
         const files = await dbClient.client
@@ -156,6 +166,17 @@ class FilesController {
         },
         {
           $limit: pageSize,
+        },
+        {
+          $project: {
+            _id: 0,
+            id: '$_id',
+            userId: '$userId',
+            name: '$name',
+            type: '$type',
+            isPublic: '$isPublic',
+            parentId: '$parentId',
+          },
         },
       ];
 
