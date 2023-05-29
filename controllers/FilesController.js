@@ -91,6 +91,84 @@ class FilesController {
     }
     return response.status(401).send({ error: 'Unauthorized' });
   }
+
+  static async getShow(request, response) {
+    const { 'x-token': token } = request.headers;
+    const { id } = request.params;
+    const user = await getUserFromToken(token);
+    if (user !== null) {
+      const file = await dbClient.client.db().collection('files').findOne({ _id: ObjectId(id), userId: ObjectId(user._id) });
+      if (file !== null) {
+        return response.status(200).send({
+          id: file._id,
+          userId: file.userId,
+          name: file.name,
+          type: file.type,
+          isPublic: file.isPublic,
+          parentId: file.parentId,
+        });
+      }
+      return response.status(404).send({ error: 'Not found' });
+    }
+    return response.status(401).send({ error: 'Unauthorized' });
+  }
+
+  static async getIndex(request, response) {
+    const { 'x-token': token } = request.headers;
+    const { parentId = '0', page = '0' } = request.query;
+    const user = await getUserFromToken(token);
+    if (user !== null) {
+      const pageSize = 20;
+      const skip = Number(page) * pageSize;
+
+      if (parentId === '0') {
+        const pipeline = [
+          {
+            $match: {
+              userId: ObjectId(user._id),
+            },
+          },
+          {
+            $skip: skip,
+          },
+          {
+            $limit: pageSize,
+          },
+        ];
+
+        const files = await dbClient.client
+          .db()
+          .collection('files')
+          .aggregate(pipeline)
+          .toArray();
+
+        return response.status(200).send(files);
+      }
+      const pipeline = [
+        {
+          $match: {
+            userId: ObjectId(user._id),
+            parentId,
+          },
+        },
+        {
+          $skip: skip,
+        },
+        {
+          $limit: pageSize,
+        },
+      ];
+
+      const files = await dbClient.client
+        .db()
+        .collection('files')
+        .aggregate(pipeline)
+        .toArray();
+
+      return response.status(200).send(files);
+    }
+    return response.status(401).send({ error: 'Unauthorized' });
+  }
 }
 
 module.exports = FilesController;
