@@ -1,6 +1,8 @@
 import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
 
+const mime = require('mime-types');
+
 const { v4: uuid } = require('uuid');
 const fs = require('fs');
 const path = require('path');
@@ -236,6 +238,30 @@ class FilesController {
       return response.status(404).send({ error: 'Not found' });
     }
     return response.status(401).send({ error: 'Unauthorized' });
+  }
+
+  static async getFile(request, response) {
+    const { 'x-token': token } = request.headers;
+    const { id } = request.params;
+    const user = await getUserFromToken(token);
+    if (user !== null) {
+      const file = await dbClient.client.db().collection('files').findOne({ _id: ObjectId(id), userId: ObjectId(user._id) });
+      if (file !== null && file.type === 'folder') {
+        return response.status(400).send({ error: "A folder doesn't have content" });
+      }
+      if (file !== null && file.isPublic === true) {
+        if (!fs.existsSync(file.localPath)) {
+          return response.status(404).send({ error: 'Not found' });
+        }
+        const fileContent = fs.readFileSync(file.localPath);
+        const mimeType = mime.lookup(file.name);
+        response.setHeader('Content-Type', mimeType);
+        response.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
+        return response.send(fileContent);
+      }
+      return response.status(404).send({ error: 'Not found' });
+    }
+    return response.status(404).send({ error: 'Not found' });
   }
 }
 
