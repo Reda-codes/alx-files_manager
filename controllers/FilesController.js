@@ -21,15 +21,15 @@ class FilesController {
     const supportedFiles = ['folder', 'file', 'image'];
     if (user !== null) {
       if (name === false) {
-        response.status(400).send({ error: 'Missing name' });
+        return response.status(400).send({ error: 'Missing name' });
       }
 
       if (!supportedFiles.includes(type)) {
-        response.status(400).send({ error: 'Missing type' });
+        return response.status(400).send({ error: 'Missing type' });
       }
 
       if (type !== 'folder' && data === false) {
-        response.status(400).send({ error: 'Missing data' });
+        return response.status(400).send({ error: 'Missing data' });
       }
 
       if (parentId !== 0) {
