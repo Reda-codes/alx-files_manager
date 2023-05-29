@@ -136,6 +136,7 @@ class FilesController {
           },
           {
             $project: {
+              _id: 0,
               id: '$_id',
               userId: '$userId',
               name: '$name',
@@ -187,6 +188,52 @@ class FilesController {
         .toArray();
 
       return response.status(200).send(files);
+    }
+    return response.status(401).send({ error: 'Unauthorized' });
+  }
+
+  static async putPublish(request, response) {
+    const { 'x-token': token } = request.headers;
+    const { id } = request.params;
+    const user = await getUserFromToken(token);
+    if (user !== null) {
+      const file = await dbClient.client.db().collection('files').findOne({ _id: ObjectId(id), userId: ObjectId(user._id) });
+      if (file !== null) {
+        dbClient.client.db().collection('files').updateOne({ _id: ObjectId(id), userId: ObjectId(user._id) }, { $set: { isPublic: true } });
+        const updatedFile = await dbClient.client.db().collection('files').findOne({ _id: ObjectId(id), userId: ObjectId(user._id) });
+        return response.status(200).send({
+          id: updatedFile._id,
+          userId: updatedFile.userId,
+          name: updatedFile.name,
+          type: updatedFile.type,
+          isPublic: updatedFile.isPublic,
+          parentId: updatedFile.parentId,
+        });
+      }
+      return response.status(404).send({ error: 'Not found' });
+    }
+    return response.status(401).send({ error: 'Unauthorized' });
+  }
+
+  static async putUnpublish(request, response) {
+    const { 'x-token': token } = request.headers;
+    const { id } = request.params;
+    const user = await getUserFromToken(token);
+    if (user !== null) {
+      const file = await dbClient.client.db().collection('files').findOne({ _id: ObjectId(id), userId: ObjectId(user._id) });
+      if (file !== null) {
+        dbClient.client.db().collection('files').updateOne({ _id: ObjectId(id), userId: ObjectId(user._id) }, { $set: { isPublic: false } });
+        const updatedFile = await dbClient.client.db().collection('files').findOne({ _id: ObjectId(id), userId: ObjectId(user._id) });
+        return response.status(200).send({
+          id: updatedFile._id,
+          userId: updatedFile.userId,
+          name: updatedFile.name,
+          type: updatedFile.type,
+          isPublic: updatedFile.isPublic,
+          parentId: updatedFile.parentId,
+        });
+      }
+      return response.status(404).send({ error: 'Not found' });
     }
     return response.status(401).send({ error: 'Unauthorized' });
   }
