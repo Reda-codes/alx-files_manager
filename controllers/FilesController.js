@@ -5,6 +5,7 @@ const { v4: uuid } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 const mime = require('mime-types');
+const Bull = require('bull');
 
 const { getUserFromToken } = require('../utils/tools');
 
@@ -80,6 +81,11 @@ class FilesController {
 
       const result = await dbClient.client.db().collection('files').insertOne(file);
       const insertedFile = result.ops[0];
+
+      if (type === 'image') {
+        const fileQueue = new Bull('fileQueue');
+        await fileQueue.add({ userId: user._id, fileId: insertedFile._id });
+      }
 
       return response.status(201).send({
         id: insertedFile._id,
@@ -242,8 +248,12 @@ class FilesController {
   static async getFile(request, response) {
     const { 'x-token': token } = request.headers;
     const { id } = request.params;
+    const { size = '0' } = request.query;
+    const thumbnailSizes = ['500', '250', '100'];
+
     const file = await dbClient.client.db().collection('files').findOne({ _id: ObjectId(id) });
     const user = await getUserFromToken(token);
+
     if (file !== null) {
       if (user !== null) {
         if (file.isPublic === false && file.userId !== user._id) {
@@ -252,6 +262,20 @@ class FilesController {
           }
           if (!fs.existsSync(file.localPath)) {
             return response.status(404).send({ error: 'Not found' });
+          }
+          if (thumbnailSizes.includes(size)) {
+            const localFile = `${file.localPath}_${size}`;
+
+            if (!fs.existsSync(localFile)) {
+              return response.status(404).send({ error: 'Not found' });
+            }
+
+            const fileContent = fs.readFileSync(localFile);
+            const mimeType = mime.lookup(file.name);
+
+            response.setHeader('Content-Type', mimeType);
+            response.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
+            return response.send(fileContent);
           }
           const fileContent = fs.readFileSync(file.localPath);
           const mimeType = mime.lookup(file.name);
@@ -266,6 +290,20 @@ class FilesController {
         }
         if (!fs.existsSync(file.localPath)) {
           return response.status(404).send({ error: 'Not found' });
+        }
+        if (thumbnailSizes.includes(size)) {
+          const localFile = `${file.localPath}_${size}`;
+
+          if (!fs.existsSync(localFile)) {
+            return response.status(404).send({ error: 'Not found' });
+          }
+
+          const fileContent = fs.readFileSync(localFile);
+          const mimeType = mime.lookup(file.name);
+
+          response.setHeader('Content-Type', mimeType);
+          response.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
+          return response.send(fileContent);
         }
         const fileContent = fs.readFileSync(file.localPath);
         const mimeType = mime.lookup(file.name);
