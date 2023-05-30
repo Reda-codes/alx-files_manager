@@ -1,5 +1,6 @@
 import dbClient from '../utils/db';
 
+const Bull = require('bull');
 const { getUserFromToken, hashPassword } = require('../utils/tools');
 
 class UsersController {
@@ -17,6 +18,8 @@ class UsersController {
       }
       const hashed = hashPassword(password);
       const result = await dbClient.client.db().collection('users').insertOne({ email, password: hashed });
+      const userQueue = new Bull('userQueue');
+      userQueue.add({ userId: result.insertedId, email });
       return response.status(201).send({ id: result.insertedId, email });
     } catch (error) {
       return response.status(500).send({ error: 'Internal server error' });
